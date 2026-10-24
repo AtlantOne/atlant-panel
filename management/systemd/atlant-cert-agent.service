@@ -1,0 +1,31 @@
+[Unit]
+Description=Atlant independent HTTPS certificate agent
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=atlant-control
+Group=atlant-control
+ExecStart=/usr/local/libexec/atlant-cert-agent --config /var/lib/atlant-control/certificates/config.json
+Restart=on-failure
+RestartSec=30
+UMask=0077
+StateDirectory=atlant-control/certificates
+StateDirectoryMode=0700
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ReadWritePaths=/var/lib/atlant-control/certificates
+
+[Install]
+WantedBy=multi-user.target

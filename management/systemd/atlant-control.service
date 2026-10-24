@@ -1,0 +1,33 @@
+[Unit]
+Description=Atlant independent management panel
+Wants=network-online.target atlant-control-helper.service
+After=network-online.target atlant-control-helper.service
+
+[Service]
+Type=notify
+NotifyAccess=main
+TimeoutStartSec=15
+User=atlant-control
+Group=atlant-control
+ExecStart=/usr/bin/python3 -I /opt/atlant-control/management/atlant_control.py serve --config /etc/atlant-control/client.json
+Restart=on-failure
+RestartSec=5
+UMask=0077
+StateDirectory=atlant-control
+StateDirectoryMode=0700
+NoNewPrivileges=true
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ReadWritePaths=/var/lib/atlant-control
+
+[Install]
+WantedBy=multi-user.target

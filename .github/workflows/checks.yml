@@ -1,0 +1,16 @@
+name: Panel checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - run: |
+          python3 -m unittest discover -s management -p 'test_*.py'
+          node --test tests/ui/*.test.cjs
+          node --check management/control/web/app.js

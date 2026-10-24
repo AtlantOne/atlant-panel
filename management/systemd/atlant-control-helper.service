@@ -1,0 +1,31 @@
+[Unit]
+Description=Atlant restricted local service helper
+After=local-fs.target
+
+[Service]
+Type=notify
+NotifyAccess=main
+TimeoutStartSec=15
+User=root
+Group=atlant-control
+ExecStart=/usr/bin/python3 -I /opt/atlant-control/management/atlant_service_helper.py --config /etc/atlant-control/helper.json
+Restart=on-failure
+RestartSec=5
+UMask=0077
+RuntimeDirectory=atlant-control-helper
+RuntimeDirectoryMode=0750
+StateDirectory=atlant-control-helper
+StateDirectoryMode=0700
+NoNewPrivileges=true
+CapabilityBoundingSet=CAP_CHOWN CAP_DAC_OVERRIDE CAP_FOWNER
+ProtectSystem=full
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX
+
+[Install]
+WantedBy=multi-user.target
