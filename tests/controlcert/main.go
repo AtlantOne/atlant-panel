@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"net"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -26,7 +27,10 @@ func certificate(serial int64, host string, expired bool) pair {
 		panic(err)
 	}
 	now := time.Now()
-	leaf := &x509.Certificate{SerialNumber: big.NewInt(serial), Subject: pkix.Name{CommonName: host}, DNSNames: []string{host}, NotBefore: now.Add(-time.Hour), NotAfter: now.Add(time.Hour), KeyUsage: x509.KeyUsageDigitalSignature, ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}, BasicConstraintsValid: true}
+	// Self-signed trust anchors need distinct issuer names. Reusing the same
+	// subject for unrelated keys makes OpenSSL's trust-anchor selection ambiguous.
+	// Hostname verification still uses the DNS/IP subject alternative names.
+	leaf := &x509.Certificate{SerialNumber: big.NewInt(serial), Subject: pkix.Name{CommonName: host + " fixture " + strconv.FormatInt(serial, 10)}, DNSNames: []string{host}, NotBefore: now.Add(-time.Hour), NotAfter: now.Add(time.Hour), KeyUsage: x509.KeyUsageDigitalSignature, ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}, BasicConstraintsValid: true}
 	if host == "localhost" {
 		leaf.IPAddresses = []net.IP{net.ParseIP("127.0.0.1")}
 	} else if ip := net.ParseIP(host); ip != nil {
