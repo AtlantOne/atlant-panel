@@ -1,5 +1,7 @@
 # Atlant Panel
 
+[Download panel](https://github.com/AtlantOne/atlant-panel/releases) · [Installation and CLI](management/README.md) · [Main project](https://github.com/AtlantOne/atlant-core) · [Help](https://github.com/AtlantOne/atlant-core/discussions/categories/q-a)
+
 Atlant Panel manages [Atlant Core](https://github.com/AtlantOne/atlant-core)
 through a web interface, with an administration CLI for installation and panel
 settings. The VPN engine runs as a separate service, so you can use it with or
