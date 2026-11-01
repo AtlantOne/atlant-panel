@@ -40,7 +40,7 @@ def verify(api, sid, url):
     if len(raw)!=32 or not hmac.compare_digest(hashlib.sha256(raw).hexdigest(),expected):raise ValueError('invalid')
 
 
-def access(state, sid, url=None):
+def access(state, sid, url=None, *, allow_relative=False):
     if not re.fullmatch(r'[a-f0-9]{32}',sid):raise ValueError('invalid')
     folder=Path(state);folder.mkdir(parents=True,exist_ok=True,mode=0o700)
     path=folder/'subscription-links.db'
@@ -51,7 +51,8 @@ def access(state, sid, url=None):
     with closing(sqlite3.connect(path,timeout=5)) as db, db:
         db.execute('CREATE TABLE IF NOT EXISTS links(subscription_id TEXT PRIMARY KEY,url TEXT NOT NULL)')
         if url is not None:
-            validated_link(url)
+            if not (allow_relative and isinstance(url,str) and re.fullmatch(r'/sub/[A-Za-z0-9_-]{43}',url)):
+                validated_link(url)
             db.execute('INSERT INTO links VALUES(?,?) ON CONFLICT(subscription_id) DO UPDATE SET url=excluded.url',(sid,url))
         row=db.execute('SELECT url FROM links WHERE subscription_id=?',(sid,)).fetchone()
         return row[0] if row else ''

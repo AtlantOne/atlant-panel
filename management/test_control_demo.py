@@ -8,6 +8,42 @@ from atlantctl import AdminError, Manager
 
 
 class DemoFlowTests(unittest.TestCase):
+    def test_group_name_and_members_can_be_saved_again_and_removed_without_deleting_accounts(self):
+        import json
+        self.manager.execute(self.manager.prepare('groupcreate '+json.dumps({'name':'Original','users':['demo']})))
+        group=self.manager.execute(self.manager.prepare('groups'))[0]
+        group_id=group['id'];quota=dict(self.api.subscriptions[0]['global_quota'])
+        self.manager.execute(self.manager.prepare('groupset '+group_id+' '+json.dumps({'name':'Renamed','note':'Edited','users':['demo','phone'],'revision':group['revision']})))
+        saved=self.manager.execute(self.manager.prepare('groups'))[0]
+        self.assertEqual('Renamed',saved['name']);self.assertEqual('Edited',saved['note']);self.assertEqual({'demo','phone'},set(saved['users']))
+        self.manager.execute(self.manager.prepare('groupset '+group_id+' '+json.dumps({'users':['phone'],'revision':saved['revision']})))
+        saved=self.manager.execute(self.manager.prepare('groups'))[0]
+        self.assertEqual('Renamed',saved['name']);self.assertEqual(['phone'],saved['users'])
+        self.manager.execute(self.manager.prepare('groupdelete '+group_id))
+        self.assertEqual([],self.manager.execute(self.manager.prepare('groups')))
+        self.assertIn('demo',self.api.users);self.assertIn('phone',self.api.users)
+        self.assertEqual(quota,self.api.subscriptions[0]['global_quota'])
+
+    def test_group_access_changes_all_members_without_changing_quota(self):
+        import json
+        self.manager.execute(self.manager.prepare('groupcreate '+json.dumps({'name':'Team','users':['demo','phone']})))
+        group=self.api.groups[-1]
+        quota=dict(self.api.subscriptions[0]['global_quota'])
+        for enabled in (False,True):
+            action=self.manager.prepare('groupaccess '+group['id']+' '+json.dumps({'revision':group['revision'],'enabled':enabled}))
+            self.manager.execute(action)
+            self.assertTrue(all(self.api.users[name]['enabled']==enabled for name in group['users']))
+            self.assertEqual(quota,self.api.subscriptions[0]['global_quota'])
+
+    def test_group_access_rejects_membership_changed_after_prepare(self):
+        import json
+        self.manager.execute(self.manager.prepare('groupcreate '+json.dumps({'name':'Team','users':['demo']})))
+        group=self.api.groups[-1]
+        action=self.manager.prepare('groupaccess '+group['id']+' '+json.dumps({'revision':group['revision'],'enabled':False}))
+        self.manager.execute(self.manager.prepare('groupset '+group['id']+' '+json.dumps({'users':['phone'],'revision':group['revision']})))
+        with self.assertRaises(AdminError):self.manager.execute(action)
+        self.assertTrue(self.api.users['demo']['enabled']);self.assertTrue(self.api.users['phone']['enabled'])
+
     def test_subscription_migration_preserves_demo_usage_and_requires_current_plan(self):
         plan=self.manager.execute(self.manager.prepare('submigration'))
         self.assertTrue(plan['items'][0]['eligible'])

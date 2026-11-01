@@ -21,6 +21,18 @@ class FakeAPI:
         return {'status':'ok','pbk':'b'*64,'link':'atlant://test?pbk='+('b'*64)}
 
 class ManagementTests(unittest.TestCase):
+    def test_known_subscription_conflict_has_safe_actionable_message(self):
+        client=API({'api_url':'http://127.0.0.1:12345','api_key':'local-test-only'})
+        body=io.BytesIO(b'enable quota coordinator in server configuration first\n')
+        failure=urllib.error.HTTPError('http://127.0.0.1:12345/api/subscriptions',409,'conflict',{},body)
+        client.opener=Mock();client.opener.open.side_effect=failure
+        with self.assertRaises(AdminError) as caught:client.request('POST','/api/subscriptions',{})
+        self.assertEqual('subscription_accounting_disabled',str(caught.exception))
+        self.assertEqual(409,caught.exception.status_code)
+        self.assertTrue(body.closed)
+        from control.i18n import error_message
+        self.assertIn('учёт подписок',error_message(caught.exception,'ru'))
+
     def test_http_error_response_is_closed_before_returning_safe_error(self):
         client=API({'api_url':'http://127.0.0.1:12345','api_key':'local-test-only'})
         body=io.BytesIO(b'private upstream diagnostic')

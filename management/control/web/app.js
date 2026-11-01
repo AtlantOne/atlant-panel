@@ -123,6 +123,7 @@ function requiresConfirmation(command) {
   if (critical.has(verb)) return true;
   if (['service','certservice'].includes(verb)) return ['stop','restart'].includes(subcommand);
   if (verb === 'bulk') return ['delete','disable','reset'].includes(subcommand);
+  if (verb === 'groupaccess') { try { return JSON.parse(command.slice(command.indexOf('{'))).enabled === false; } catch { return true; } }
   if (verb === 'reload') return true;
   if (['configset','configsave','set','subset','inboundset','quotaset'].includes(verb)) {
     try {
@@ -228,7 +229,7 @@ function table(root, headings, rows) {
   const thead = element('thead'); thead.append(head); node.append(thead);
   const body = element('tbody');
   if (!rows.length) { const row = element('tr'), cell = element('td', t('empty'), 'empty'); cell.colSpan = headings.length; row.append(cell); body.append(row); }
-  for (const cells of rows) { const row = element('tr'); for (const cell of cells) { const td = element('td'); td.append(cell instanceof Node ? cell : document.createTextNode(String(cell ?? ''))); row.append(td); } body.append(row); }
+  for (const cells of rows) { const row = element('tr'); for (const [index,cell] of cells.entries()) { const td = element('td');td.dataset.label=t(headings[index]);td.append(cell instanceof Node ? cell : document.createTextNode(String(cell ?? ''))); row.append(td); } body.append(row); }
   node.append(body); wrap.append(node); root.append(wrap);
 }
 function actions(items) { const node = element('div', undefined, 'actions'); for (const [key, command, reveal] of items) node.append(button(key, () => operation(command, reveal), key === 'delete' ? 'danger' : '')); return node; }
@@ -419,21 +420,28 @@ async function createUser() {
 async function editGroup(id = '') {
   const [groups, accounts] = await Promise.all([readOptional('groups', []), read('usersall')]);
   const current = groups.find(group => group.id === id) || {name: '', note: '', users: []};
-  const root = editDialog(id ? `${t('edit')}: ${current.name}` : t('create')), sections = tabs(root, ['basic', 'group_members']);
-  sections.group_members.append(element('p', t('group_move_notice'), 'editor-note'));
-  const members = element('div', undefined, 'member-list'), chosen = new Set(current.users);
-  for (const user of accounts.users) {
-    const label = element('label', undefined, 'check'), input = element('input'); input.type = 'checkbox'; input.checked = chosen.has(user.name);
-    input.addEventListener('change', () => input.checked ? chosen.add(user.name) : chosen.delete(user.name));
-    const other = groups.find(group => group.id !== id && group.users.includes(user.name));
-    label.append(input, document.createTextNode(user.name + (other ? ` · ${other.name}` : ''))); members.append(label);
+  const root = editDialog(id ? `${t('edit')}: ${current.name}` : t('create'));
+  const chosen = new Set(current.users),members=element('div',undefined,'member-list'),section=element('fieldset',undefined,'editor-group');
+  section.append(element('legend',t('group_members')));
+  const search=element('input');search.type='search';search.placeholder=t('search');search.setAttribute('aria-label',t('search'));
+  const count=element('p','', 'compact-note');section.append(search,count,members);
+  let visibleMembers=100;
+  function renderMembers(){
+    count.textContent=t('selected_members')+': '+chosen.size;members.replaceChildren();
+    const filtered=accounts.users.filter(user=>user.name.toLowerCase().includes(search.value.toLowerCase()));
+    for (const user of filtered.slice(0,visibleMembers)) {
+      const label=element('label',undefined,'member-choice'),input=element('input');input.type='checkbox';input.checked=chosen.has(user.name);
+      input.addEventListener('change',()=>{input.checked?chosen.add(user.name):chosen.delete(user.name);count.textContent=t('selected_members')+': '+chosen.size;});
+      const other=groups.find(group=>group.id!==id&&group.users.includes(user.name));
+      const name=element('span',user.name);if(other)name.append(element('small',other.name));label.append(input,name,badge(user.enabled));members.append(label);
+    }
+    if(!filtered.length)members.append(element('p',t('empty'),'compact-note'));
+    if(filtered.length>visibleMembers)members.append(button('show_more',()=>{visibleMembers+=100;renderMembers();}));
   }
-  sections.group_members.append(members);
-  form(sections.basic, node => ({name: field(node, 'name', current.name), note: field(node, 'note', current.note)}), values => operation(`${id ? 'groupset ' + id : 'groupcreate'} ${json({name: values.name.value.trim(), note: values.note.value, users: [...chosen], ...(id ? {revision: current.revision} : {})})}`));
-  // The shared save action also remains available on the membership tab.
-  sections.group_members.append(button('save', () => {
-    const form = sections.basic.querySelector('form'); form.requestSubmit();
-  }, 'primary'));
+  search.addEventListener('input',()=>{visibleMembers=100;renderMembers();});renderMembers();
+  form(root,node=>{const basic=element('fieldset',undefined,'editor-group');basic.append(element('legend',t('basic')));node.append(basic);const fields={name:field(basic,'name',current.name),note:field(basic,'note',current.note)};fields.name.required=true;node.append(section);return fields;},values=>operation(`${id?'groupset '+id:'groupcreate'} ${json({name:values.name.value.trim(),note:values.note.value,users:[...chosen],...(id?{revision:current.revision}:{})})}`));
+  const groupForm=root.querySelector('form');groupForm.id='group-form-'+(++editorSequence);groupForm.classList.add('group-editor-form');
+  const footer=$('save-editor');footer.hidden=false;footer.dataset.formTarget=groupForm.id;footer.onclick=()=>groupForm.requestSubmit();
   $('editor').showModal();
 }
 async function editSubscription(id = '') {
@@ -781,17 +789,23 @@ async function render(snapshot = null) {
     const next = button('next', async () => { usersPage++; await render(); }); next.disabled = usersPage * 10 >= filtered.length;
     paging.append(previous, element('span', String(usersPage)), next); root.append(paging);
   } else if (page === 'groups') {
-    let groups = null;
-    try { groups = await read('groups'); } catch (error) { groups = null; }
-    if (!groups) {
-      card(root, 'groups').append(element('p', t('core_feature_unavailable'), 'editor-note'));
-    } else {
-    card(root, 'groups').append(element('p', t('group_notice'), 'editor-note'));
-    table(card(root, 'groups'), ['name', 'clients', 'upload', 'download', 'used', 'settings'], groups.map(group => {
-      const controls = actions([['delete', `groupdelete ${group.id}`]]); controls.prepend(button('edit', () => editGroup(group.id)));
-      return [group.name, String(group.users.length), bytes(group.up_bytes), bytes(group.down_bytes), bytes(Number(group.up_bytes || 0) + Number(group.down_bytes || 0)), controls];
-    }));
+    const [groups,all]=await Promise.all([read('groups'),read('usersall')]);
+    root.append(element('p',t('group_access_hint'),'page-description'));
+    const list=element('div',undefined,'group-list');root.append(list);
+    for(const group of groups){
+      const record=element('section',undefined,'group-card'),top=element('div',undefined,'group-heading'),title=element('div');
+      const members=all.users.filter(user=>group.users.includes(user.name)),active=members.filter(user=>user.enabled).length;
+      title.append(element('h2',group.name),element('p',`${t('clients')}: ${members.length} · ${t('enabled')}: ${active} · ${bytes(Number(group.up_bytes||0)+Number(group.down_bytes||0))}`));
+      if(group.note)title.append(element('small',group.note));top.append(title,button('edit',()=>editGroup(group.id),'quiet-action'));record.append(top);
+      const controls=element('div',undefined,'group-actions');
+      for(const [key,enabled] of [['enable_group',true],['disable_group',false]]){const action=button(key,()=>operation(`groupaccess ${group.id} ${json({revision:group.revision,enabled})}`));action.disabled=!members.length;controls.append(action);}
+      const menu=element('details',undefined,'row-menu'),toggle=element('summary','⋯');toggle.setAttribute('aria-label',t('settings'));const options=element('div',undefined,'actions');options.append(button('delete',()=>operation('groupdelete '+group.id),'danger'));menu.append(toggle,options);top.append(menu);record.append(controls);
+      const details=element('details',undefined,'group-members');details.append(element('summary',t('group_members')+' · '+members.length));
+      if(!members.length)details.append(element('p',t('group_empty'),'compact-note'));
+      for(const user of members){const row=element('div',undefined,'group-member-row');row.append(button('edit',()=>editUser(user.name),'member-name'));row.firstChild.textContent=user.name;row.append(badge(user.enabled));details.append(row);}
+      record.append(details);list.append(record);
     }
+    if(!groups.length)list.append(element('p',t('empty'),'empty'));
   } else if (page === 'subscriptions') {
     const [records, catalog] = await Promise.all([read('subscriptions'), readOptional('inbounds', {inbounds: [], unavailable: true})]);
     const toolbar = element('div', undefined, 'toolbar'), search = element('input'); search.type = 'search'; search.placeholder = t('search'); search.setAttribute('aria-label', t('search'));

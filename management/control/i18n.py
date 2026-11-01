@@ -6,6 +6,17 @@ LANGUAGES = ('en', 'ru', 'zh')
 
 # Entries are (English, Russian, Simplified Chinese).
 MESSAGES = {
+    'subscription_accounting_disabled': ('Subscription accounting is disabled on this server. Update the managed installation and restart the VPN service.', 'На сервере отключён учёт подписок. Обновите установленный сервер и перезапустите службу VPN.', '此服务器未启用订阅计费。请更新服务器安装并重启 VPN 服务。'),
+    'subscription_changed': ('The subscription changed. Reload it before saving.', 'Подписка изменилась. Обновите её перед сохранением.', '订阅已更改，请刷新后保存。'),
+    'subscription_account_conflict': ('This account already belongs to another subscription.', 'Эта учётная запись уже привязана к другой подписке.', '此账户已属于其他订阅。'),
+    'group_changed': ('The group changed. Reload it before applying this action.', 'Состав группы изменился. Обновите её перед выполнением действия.', '分组已更改，请刷新后重试。'),
+    'group_partial_update': ('Some accounts were updated. Reload the group before retrying.', 'Часть участников уже обновлена. Обновите группу перед повторной попыткой.', '部分账户已更新，请刷新分组后重试。'),
+    'group_access_hint': ('Manage members and their access together. Subscription quotas stay separate.', 'Управляйте составом и доступом участников вместе. Лимиты остаются у подписок.', '统一管理成员及其访问权限，流量限额仍由订阅管理。'),
+    'enable_group': ('Enable all', 'Включить всех', '启用全部'),
+    'disable_group': ('Disable all', 'Отключить всех', '停用全部'),
+    'group_empty': ('No members yet. Add accounts to this group.', 'Участников пока нет. Добавьте их в группу.', '暂无成员，请添加账户。'),
+    'selected_members': ('Selected members', 'Выбрано участников', '已选成员'),
+    'show_more': ('Show more', 'Показать ещё', '显示更多'),
     'backup_data_create': ('Back up VPN data', 'Создать копию данных VPN', '备份 VPN 数据'),
     'backup_panel_create': ('Back up panel settings', 'Создать копию настроек панели', '备份面板设置'),
     'backup_certificate_create': ('Back up certificate settings', 'Создать копию настроек сертификатов', '备份证书设置'),

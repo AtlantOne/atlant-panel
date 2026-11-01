@@ -199,9 +199,17 @@ class API:
                 response_limit = 48 * 1024 * 1024 if path == '/api/backup/sqlite' else MAX_BODY
                 raw = response.read(response_limit + 1)
         except urllib.error.HTTPError as error:
-            failure=AdminError('API: HTTP %s. Проверьте параметры и состояние сервера.' % error.code)
+            # Only translate known public errors; arbitrary upstream bodies may
+            # contain paths, credentials or other private diagnostics.
+            try: reason=error.read(1025).decode('utf-8','replace').strip()
+            finally:error.close()
+            public_errors={
+                'enable quota coordinator in server configuration first':'subscription_accounting_disabled',
+                'subscription changed; reload before saving':'subscription_changed',
+                'connection account already belongs to another subscription':'subscription_account_conflict',
+            }
+            failure=AdminError(public_errors.get(reason,'API: HTTP %s. Проверьте параметры и состояние сервера.' % error.code))
             failure.status_code=error.code
-            error.close()
             raise failure from None
         except (OSError, urllib.error.URLError):
             raise AdminError('API недоступен; проверьте службу и адрес loopback.') from None
@@ -534,6 +542,12 @@ class Manager:
             a['label']=command+' '+sid
             a['label_key'],a['target']=command,sid
         elif command=='groups': need(0);a['path']='/api/groups'
+        elif command=='groupaccess':
+            gid,_,payload=tail.partition(' ');identifier(gid);patch=object_json(payload)
+            if set(patch)!={'revision','enabled'} or type(patch['enabled']) is not bool or type(patch['revision']) is not int:raise AdminError('invalid')
+            record=next((g for g in self.api.request('GET','/api/groups') if g['id']==gid),None)
+            if record is None or record['revision']!=patch['revision']:raise AdminError('group_changed')
+            a.update(local='group_access',write=True,gid=gid,revision=patch['revision'],enabled=patch['enabled'],members=list(record['users']),label='groupaccess '+record['name'])
         elif command in {'groupcreate','groupset','groupdelete'}:
             if command=='groupcreate':
                 patch=object_json(tail)
@@ -734,6 +748,16 @@ class Manager:
         elif local=='license':result=Path(__file__).with_name('LICENSE').read_text(encoding='utf-8')
         elif local=='cancel': result={'cancelled':True}
         elif local=='result': result=a['result']
+        elif local=='group_access':
+            current=next((g for g in self.api.request('GET','/api/groups') if g['id']==a['gid']),None)
+            if current is None or current['revision']!=a['revision'] or current['users']!=a['members']:raise AdminError('group_changed')
+            affected=0
+            for offset in range(0,len(a['members']),1000):
+                try:self.api.request('POST','/api/users/bulk-'+('enable' if a['enabled'] else 'disable'),{'names':a['members'][offset:offset+1000]})
+                except AdminError:
+                    self.audit(a['label'],'partial:'+str(affected));raise AdminError('group_partial_update') from None
+                affected+=len(a['members'][offset:offset+1000])
+            result={'affected':affected,'enabled':a['enabled']}
         elif local=='users_all':
             records=[]
             for offset in range(0,10000,100):
@@ -745,7 +769,15 @@ class Manager:
         elif local=='subscription_link':
             from control.subscription_links import access,verify
             if a.get('url'):verify(self.api,a['sid'],a['url'])
-            result={'url':access(self.state,a['sid'],a.get('url'))}
+            url=access(self.state,a['sid'],a.get('url'))
+            if url.startswith('/sub/'):
+                settings=self.api.request('GET','/api/subscription-service')
+                base=settings.get('public_url','')
+                url=base.rstrip('/')+url if settings.get('enabled') and base.startswith('https://') else ''
+                if url:
+                    from control.subscription_links import validated_link
+                    validated_link(url)
+            result={'url':url}
         elif local=='peer_read':result=self.peer_call('info')
         elif local=='peer_catalog':result=self.peer_call('call',a['remote'],'inbounds')
         elif local=='peer_jobs':result=self.peer_call('jobs',a['remote'])
@@ -815,7 +847,7 @@ class Manager:
             result=self.api.request(a['method'],a['path'],a['body'],a['query'])
         if isinstance(result,dict) and result.get('url') and isinstance(result.get('subscription'),dict):
             from control.subscription_links import access
-            try:access(self.state,result['subscription']['id'],result['url'])
+            try:access(self.state,result['subscription']['id'],result['url'],allow_relative=True)
             except (OSError,ValueError,sqlite3.Error):result['link_cache_saved']=False
         if a['label'].startswith('link '): result={'link':result if isinstance(result,str) else result.get('link','')}
         if a['label'].startswith('subrekey '):result={'success':True,'refresh_subscription':True}

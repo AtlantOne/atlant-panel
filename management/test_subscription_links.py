@@ -17,6 +17,17 @@ URL='https://vpn.example.test/sub/'+TOKEN
 HASH=hashlib.sha256(bytes(range(32))).hexdigest()
 
 class SubscriptionLinkTests(unittest.TestCase):
+    def test_core_relative_token_is_retained_until_https_is_configured(self):
+        path='/sub/'+TOKEN
+        with self.assertRaises(ValueError):access(self.temp.name,SID,path)
+        action={'local':'result','result':{'subscription':{'id':SID},'url':path},'label':'subscribercreate','secret':True,'write':False}
+        self.manager.execute(action)
+        self.assertEqual(path,access(self.temp.name,SID))
+        self.api.request.side_effect=lambda method,route,*args,**kw:([{'id':SID}] if route=='/api/subscriptions' else {'enabled':False})
+        self.assertEqual('',self.manager.execute(self.manager.prepare('subshare '+SID))['url'])
+        self.api.request.side_effect=lambda method,route,*args,**kw:([{'id':SID}] if route=='/api/subscriptions' else {'enabled':True,'public_url':'https://vpn.example.test'})
+        self.assertEqual(URL,self.manager.execute(self.manager.prepare('subshare '+SID))['url'])
+
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
         self.api=Mock()

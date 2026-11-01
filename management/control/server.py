@@ -185,8 +185,10 @@ class Handler(BaseHTTPRequestHandler):
             return
         routes = {'/': ('index.html', 'text/html; charset=utf-8'), '/app.js': ('app.js', 'text/javascript; charset=utf-8'), '/style.css': ('style.css', 'text/css; charset=utf-8'), '/theme.js': ('theme.js', 'text/javascript; charset=utf-8'), '/forms.js': ('forms.js', 'text/javascript; charset=utf-8')}
         routes.update({'/qrcode.js':('qrcode.js','text/javascript; charset=utf-8'),'/share.js':('share.js','text/javascript; charset=utf-8')})
-        if self.path in routes:
-            name, mime = routes[self.path]
+        routes.update({'/panel-shell.css':('panel-shell.css','text/css; charset=utf-8'),'/drawer.js':('drawer.js','text/javascript; charset=utf-8')})
+        asset_path=urlsplit(self.path).path
+        if asset_path in routes:
+            name, mime = routes[asset_path]
             self.send(200, (ASSETS / name).read_bytes(), mime)
         elif self.path == '/license':
             self.send(200,Path(__file__).resolve().parent.parent.joinpath('LICENSE').read_bytes(),'text/plain; charset=utf-8')

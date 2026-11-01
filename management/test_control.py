@@ -229,7 +229,7 @@ class HTTPTests(unittest.TestCase):
         return {'Cookie': headers['Set-Cookie'].split(';')[0], 'X-CSRF-Token': json.loads(raw)['csrf']}
 
     def test_assets_do_not_contain_api_key_and_have_csp(self):
-        for path in ['/', '/app.js', '/style.css', '/theme.js', '/forms.js']:
+        for path in ['/', '/app.js', '/style.css', '/theme.js', '/forms.js','/panel-shell.css?v=test','/drawer.js?v=test']:
             status, headers, raw = self.call(path)
             self.assertEqual(200, status)
             self.assertIn("frame-ancestors 'none'", headers['Content-Security-Policy'])
