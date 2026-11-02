@@ -2,13 +2,15 @@ import hashlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path, PurePosixPath
 import tempfile
 import unittest
 from unittest.mock import patch
 import zipfile
 
-ASSET=Path(__file__).resolve().parents[1]/'client/remoteadmin/assets/install.py'
+ASSET=Path(os.environ.get('ATLANT_CORE_SOURCE',str(Path(__file__).resolve().parents[1])))/'client/remoteadmin/assets/install.py'
+if not ASSET.is_file():raise unittest.SkipTest('Installer integration tests require an Atlant core checkout (ATLANT_CORE_SOURCE)')
 spec=importlib.util.spec_from_file_location('release_installer',ASSET)
 installer=importlib.util.module_from_spec(spec);spec.loader.exec_module(installer)
 

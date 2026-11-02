@@ -10,7 +10,14 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           persist-credentials: false
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: AtlantOne/atlant-core
+          path: .deps/core
+          persist-credentials: false
       - run: |
           python3 -m unittest discover -s management -p 'test_*.py'
           node --test tests/ui/*.test.cjs
           node --check management/control/web/app.js
+        env:
+          ATLANT_CORE_SOURCE: ${{ github.workspace }}/.deps/core

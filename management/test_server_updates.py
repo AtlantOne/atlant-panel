@@ -1,6 +1,7 @@
 """Preservation and failure paths for SSH-triggered server updates."""
 import importlib.util
 import json
+import os
 from pathlib import Path
 import sqlite3
 import subprocess
@@ -9,7 +10,8 @@ import unittest
 from unittest import mock
 from contextlib import closing
 
-ASSETS=Path(__file__).resolve().parents[1]/'client/remoteadmin/assets'
+ASSETS=Path(os.environ.get('ATLANT_CORE_SOURCE',str(Path(__file__).resolve().parents[1])))/'client/remoteadmin/assets'
+if not ASSETS.is_dir():raise unittest.SkipTest('Update integration tests require an Atlant core checkout (ATLANT_CORE_SOURCE)')
 
 
 def load(name):

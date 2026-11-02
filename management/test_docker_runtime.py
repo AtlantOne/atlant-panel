@@ -1,6 +1,7 @@
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import sys
 import tarfile
@@ -8,7 +9,8 @@ import tempfile
 import unittest
 from unittest import mock
 
-ASSETS=Path(__file__).resolve().parents[1]/'client/remoteadmin/assets'
+ASSETS=Path(os.environ.get('ATLANT_CORE_SOURCE',str(Path(__file__).resolve().parents[1])))/'client/remoteadmin/assets'
+if not ASSETS.is_dir():raise unittest.SkipTest('Docker integration tests require an Atlant core checkout (ATLANT_CORE_SOURCE)')
 
 def load(name):
     spec=importlib.util.spec_from_file_location('docker_'+name,ASSETS/(name+'.py'))
