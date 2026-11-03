@@ -21,6 +21,23 @@ class FakeAPI:
         return {'status':'ok','pbk':'b'*64,'link':'atlant://test?pbk='+('b'*64)}
 
 class ManagementTests(unittest.TestCase):
+    def test_saved_inbound_is_applied_with_the_exact_returned_revision(self):
+        api=Mock();api.request.side_effect=[{'revision':8,'applied':False},{'applied':True,'applied_revision':8}]
+        manager=Manager({'state_dir':self.tmp.name},api=api)
+        settings={'id':'first','name':'First','enabled':True,'listen':'127.0.0.1:1026','sni':'example.com','transports':['tcp'],'wire_version':7}
+        result=manager.execute(manager.prepare('inboundcreate 7 '+json.dumps(settings)))['result']
+        self.assertTrue(result['applied'])
+        self.assertEqual(8,result['applied_revision'])
+        self.assertEqual(('POST','/api/inbounds/apply',{'revision':8}),api.request.call_args_list[1].args)
+
+    def test_failed_apply_is_not_reported_as_a_successful_save(self):
+        api=Mock();api.request.side_effect=[{'revision':8},AdminError('API unavailable')]
+        manager=Manager({'state_dir':self.tmp.name},api=api)
+        settings={'id':'first','name':'First','enabled':True,'listen':'127.0.0.1:1026','sni':'example.com','transports':['tcp'],'wire_version':7}
+        with self.assertRaisesRegex(AdminError,'inbound_apply_failed'):
+            manager.execute(manager.prepare('inboundcreate 7 '+json.dumps(settings)))
+        self.assertEqual(2,api.request.call_count)
+
     def test_known_subscription_conflict_has_safe_actionable_message(self):
         client=API({'api_url':'http://127.0.0.1:12345','api_key':'local-test-only'})
         body=io.BytesIO(b'enable quota coordinator in server configuration first\n')

@@ -6,6 +6,8 @@ LANGUAGES = ('en', 'ru', 'zh')
 
 # Entries are (English, Russian, Simplified Chinese).
 MESSAGES = {
+    'inbound_apply_failed': ('Could not confirm activation. Refresh the connection list and check the port and server log.', 'Не удалось подтвердить применение. Обновите список подключений и проверьте порт и журнал сервера.', '无法确认配置已启用。请刷新连接列表并检查端口和服务器日志。'),
+    'inbound_apply_unavailable': ('The server did not return a valid connection revision.', 'Сервер не вернул корректную версию настроек подключения.', '服务器未返回有效的连接配置版本。'),
     'subscription_accounting_disabled': ('Subscription accounting is disabled on this server. Update the managed installation and restart the VPN service.', 'На сервере отключён учёт подписок. Обновите установленный сервер и перезапустите службу VPN.', '此服务器未启用订阅计费。请更新服务器安装并重启 VPN 服务。'),
     'subscription_changed': ('The subscription changed. Reload it before saving.', 'Подписка изменилась. Обновите её перед сохранением.', '订阅已更改，请刷新后保存。'),
     'subscription_account_conflict': ('This account already belongs to another subscription.', 'Эта учётная запись уже привязана к другой подписке.', '此账户已属于其他订阅。'),
@@ -170,7 +172,7 @@ MESSAGES = {
     'transport_xhttp': ('XHTTP', 'XHTTP', 'XHTTP'),
     'transport_quic': ('QUIC', 'QUIC', 'QUIC'),
     'apply_inbounds': ('Apply saved listeners', 'Применить сохранённые подключения', '应用已保存的入站'),
-    'inbounds_apply_notice': ('Saving does not change active connections. Applying restarts listeners and disconnects current sessions; a failed candidate restores the previous runtime and boot snapshot.', 'Сохранение не меняет работающие подключения. Применение перезапускает слушатели и разрывает текущие сессии; при отказе возвращаются прежние слушатели и загрузочная конфигурация.', '保存不会改变活动连接。应用会重启监听器并断开现有会话；失败时恢复之前的运行及启动配置。'),
+    'inbounds_apply_notice': ('Changes activate when saved, without restarting the server process. Names and public addresses update without closing sessions. Listener changes can reconnect current sessions.', 'Изменения применяются при сохранении, без перезапуска сервера. Имя и публичный адрес обновляются без закрытия сессий. Изменения слушателей могут вызвать переподключение.', '保存时自动应用配置，无需重启服务器进程。名称和公开地址更新不会关闭会话。监听器更改可能导致重新连接。'),
     'inbound_key_notice': ('A new inbound gets its own REALITY key. Editing preserves the key and stable ID.', 'Новое подключение получает отдельный ключ REALITY. Редактирование сохраняет ключ и постоянный ID.', '新入站将获得独立 REALITY 密钥。编辑保留密钥及固定 ID。'),
     'server_pub_key': ('REALITY public key', 'Публичный ключ REALITY', 'REALITY 公钥'),
     'xhttp_path': ('XHTTP request path', 'HTTP-путь XHTTP', 'XHTTP 请求路径'),

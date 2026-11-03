@@ -275,7 +275,7 @@ class PairingCoreTests(unittest.TestCase):
                 catalog=a.call(remote,'inbounds');self.assertEqual(1,catalog['revision'])
                 settings={'id':'peer-test','name':'Remote acceptance','enabled':True,'listen':config['listen'],'advertise_addr':config['listen'],'sni':'localhost.','transports':['tcp'],'wire_version':7,'xhttp_path':'/api/v1/sync'}
                 self.assertTrue(execute('inboundcreate 1 '+json.dumps(settings))['ok'])
-                catalog=a.call(remote,'inbounds');self.assertEqual(2,catalog['revision']);self.assertNotEqual(2,catalog['applied_revision'])
+                catalog=a.call(remote,'inbounds');self.assertEqual(2,catalog['revision']);self.assertEqual(2,catalog['applied_revision'])
                 self.assertTrue(execute('inboundapply 2')['ok'])
                 applied=a.call(remote,'appliedinbounds')
                 self.assertEqual(2,applied['revision']);self.assertEqual('peer-test',applied['inbounds'][0]['settings']['id'])

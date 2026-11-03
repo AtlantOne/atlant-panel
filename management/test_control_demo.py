@@ -106,16 +106,15 @@ class DemoFlowTests(unittest.TestCase):
         catalog['inbounds'].clear()
         self.assertEqual(1, len(self.api.request('GET', '/api/inbounds')['inbounds']))
 
-    def test_inbound_edit_then_explicit_apply_preserves_key(self):
+    def test_inbound_edit_applies_immediately_and_preserves_key(self):
         catalog=self.manager.execute(self.manager.prepare('inbounds'))
         settings=dict(catalog['inbounds'][0]['settings'],sni='changed.example.com')
         import json
         self.manager.execute(self.manager.prepare('inboundset 1 '+json.dumps(settings)))
         saved=self.manager.execute(self.manager.prepare('inbounds'))
         self.assertEqual(2,saved['revision'])
-        self.assertEqual(1,saved['applied_revision'])
+        self.assertEqual(2,saved['applied_revision'])
         self.assertEqual(catalog['inbounds'][0]['server_pub_key'],saved['inbounds'][0]['server_pub_key'])
-        self.manager.execute(self.manager.prepare('inboundapply 2'))
         self.assertEqual(2,self.manager.execute(self.manager.prepare('inbounds'))['applied_revision'])
 
     def test_attach_changes_both_membership_and_exported_profile(self):

@@ -845,6 +845,17 @@ class Manager:
                 users=self.api.request('GET','/api/users',query={'search':name})['users']
                 if any(u['name']==name for u in users): raise AdminError('Пользователь уже существует; создание отменено.')
             result=self.api.request(a['method'],a['path'],a['body'],a['query'])
+            if a['write'] and a['path']=='/api/inbounds':
+                revision=result.get('revision') if isinstance(result,dict) else None
+                if type(revision) is not int or revision<1:raise AdminError('inbound_apply_unavailable')
+                try:
+                    applied=self.api.request('POST','/api/inbounds/apply',{'revision':revision})
+                except AdminError:
+                    self.audit(a['label'],'apply_failed')
+                    raise AdminError('inbound_apply_failed') from None
+                if not isinstance(applied,dict) or applied.get('applied') is not True or applied.get('applied_revision')!=revision:
+                    raise AdminError('inbound_apply_failed')
+                result=dict(result,applied=True,applied_revision=revision)
         if isinstance(result,dict) and result.get('url') and isinstance(result.get('subscription'),dict):
             from control.subscription_links import access
             try:access(self.state,result['subscription']['id'],result['url'],allow_relative=True)
